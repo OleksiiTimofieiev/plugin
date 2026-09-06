@@ -1,7 +1,7 @@
 {
-  "name": "copilot-account-switcher",
-  "displayName": "Copilot Account Switcher",
-  "description": "Quickly switch the GitHub account used by GitHub Copilot",
+  "name": "vscode-account-switcher",
+  "displayName": "Account Switcher",
+  "description": "Switch the GitHub account used by GitHub Copilot with one click",
   "version": "0.0.1",
   "publisher": "otimofie",
   "license": "MIT",
@@ -23,86 +23,80 @@
   "contributes": {
     "commands": [
       {
-        "command": "copilotAccountSwitcher.switchAccount",
-        "title": "Switch Account",
-        "category": "Copilot Account",
+        "command": "accountSwitcher.copilot.switch",
+        "title": "Switch Copilot Account",
+        "category": "Account Switcher",
         "icon": "$(arrow-swap)"
       },
       {
-        "command": "copilotAccountSwitcher.addAccount",
+        "command": "accountSwitcher.copilot.add",
         "title": "Add GitHub Account",
-        "category": "Copilot Account",
+        "category": "Account Switcher",
         "icon": "$(add)"
       },
       {
-        "command": "copilotAccountSwitcher.listAccounts",
-        "title": "List GitHub Accounts",
-        "category": "Copilot Account",
-        "icon": "$(github)"
-      },
-      {
-        "command": "copilotAccountSwitcher.refresh",
+        "command": "accountSwitcher.refresh",
         "title": "Refresh",
-        "category": "Copilot Account",
+        "category": "Account Switcher",
         "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "copilotAccountSwitcher",
-          "title": "Copilot Accounts",
+          "id": "accountSwitcher",
+          "title": "Account Switcher",
           "icon": "media/activity-icon.svg"
         }
       ]
     },
     "views": {
-      "copilotAccountSwitcher": [
+      "accountSwitcher": [
         {
-          "id": "copilotAccountSwitcher.accounts",
-          "name": "GitHub Accounts",
+          "id": "accountSwitcher.copilot",
+          "name": "GitHub Copilot",
           "icon": "media/activity-icon.svg",
-          "contextualTitle": "Copilot Accounts"
+          "contextualTitle": "Account Switcher"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "copilotAccountSwitcher.accounts",
-        "contents": "No GitHub accounts are signed in.\n[Add GitHub Account](command:copilotAccountSwitcher.addAccount)",
-        "when": "copilotAccountSwitcher.accountCount == 0"
+        "view": "accountSwitcher.copilot",
+        "contents": "No GitHub accounts are signed in.\n[Add GitHub Account](command:accountSwitcher.copilot.add)",
+        "when": "accountSwitcher.copilotCount == 0"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "copilotAccountSwitcher.switchAccount",
-          "when": "view == copilotAccountSwitcher.accounts",
+          "command": "accountSwitcher.copilot.switch",
+          "when": "view == accountSwitcher.copilot",
           "group": "navigation@1"
         },
         {
-          "command": "copilotAccountSwitcher.addAccount",
-          "when": "view == copilotAccountSwitcher.accounts",
+          "command": "accountSwitcher.copilot.add",
+          "when": "view == accountSwitcher.copilot",
           "group": "navigation@2"
         },
         {
-          "command": "copilotAccountSwitcher.refresh",
-          "when": "view == copilotAccountSwitcher.accounts",
+          "command": "accountSwitcher.refresh",
+          "when": "view == accountSwitcher.copilot",
           "group": "navigation@3"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "copilotAccountSwitcher.switchAccount",
+        "command": "accountSwitcher.copilot.switch",
         "key": "ctrl+alt+shift+a",
         "mac": "cmd+alt+shift+a"
       }
     ],
     "configuration": {
-      "title": "Copilot Account Switcher",
+      "title": "Account Switcher",
       "properties": {
-        "copilotAccountSwitcher.targetExtension": {
+        "accountSwitcher.copilotExtension": {
           "type": "string",
           "default": "GitHub.copilot-chat",
           "enum": [
@@ -110,11 +104,6 @@
             "GitHub.copilot"
           ],
           "description": "Which Copilot extension's GitHub account preference to switch."
-        },
-        "copilotAccountSwitcher.showStatusBar": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show a status bar item that opens the account switcher."
         }
       }
     }
