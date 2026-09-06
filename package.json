@@ -2,7 +2,7 @@
   "name": "vscode-account-switcher",
   "displayName": "Account Switcher",
   "description": "Switch the GitHub account used by GitHub Copilot with one click",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "otimofie",
   "license": "MIT",
   "icon": "images/icon.png",
