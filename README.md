@@ -105,7 +105,7 @@ sequenceDiagram
     E->>E: Mark bob as preferred (yellow ★)
     opt Automatic reload enabled (default)
       E->>V: workbench.action.reloadWindow
-      Note over V,C: Copilot reinitializes; running operations are interrupted
+      Note over V,C: Copilot reinitializes — running operations are interrupted
     end
     C->>V: getSession("github")
     V->>G: Session for bob
