@@ -134,7 +134,7 @@ The extension is not on the Marketplace; build the VSIX yourself and install it.
 3. Package it as a VSIX:
 
    ```sh
-   npx @vscode/vsce package --allow-missing-repository
+   npx @vscode/vsce package
    ```
 
    This produces `vscode-account-switcher-<version>.vsix` in the project folder.
@@ -150,6 +150,48 @@ The extension is not on the Marketplace; build the VSIX yourself and install it.
 5. Run **Developer: Reload Window**. The **Account Switcher** icon appears in the Activity Bar.
 
 To update after changing the source, repeat steps 3–5 — an installed VSIX is not refreshed by `npm run compile`. To uninstall: `code --uninstall-extension otimofie.vscode-account-switcher`.
+
+## Sharing with your team
+
+The `.vsix` produced by `npx @vscode/vsce package` is self-contained: teammates do not need Node.js or the source, only the file.
+
+### Send the file
+
+Share `vscode-account-switcher-<version>.vsix` (chat, shared drive, …). Recipients install it with:
+
+```sh
+code --install-extension vscode-account-switcher-0.0.1.vsix
+```
+
+or **Extensions** view → `···` → **Install from VSIX...**, then **Developer: Reload Window**. There are no auto-updates — send a new file for each release.
+
+### GitHub Release (recommended)
+
+Publish the VSIX as a release asset so there is one stable download link:
+
+```sh
+npm version patch                                   # bumps package.json, commits, tags vX.Y.Z
+npx @vscode/vsce package
+git push --follow-tags
+gh release create v0.0.2 vscode-account-switcher-0.0.2.vsix --title "v0.0.2" --notes "What changed"
+```
+
+Teammates download the `.vsix` from the repository's **Releases** page and install it as above. If the repository is private they need read access.
+
+### Marketplace
+
+For public distribution with automatic updates, publish to the VS Code Marketplace:
+
+1. Create a publisher at <https://marketplace.visualstudio.com/manage> with the ID `otimofie` (must match `publisher` in `package.json`).
+2. Create an Azure DevOps Personal Access Token at <https://dev.azure.com> (**User settings → Personal access tokens**): Organization *All accessible organizations*, scope **Marketplace → Manage**.
+3. Publish:
+
+   ```sh
+   npx @vscode/vsce login otimofie      # paste the PAT
+   npx @vscode/vsce publish             # or: publish patch|minor|major to bump the version first
+   ```
+
+The extension is then listed at `https://marketplace.visualstudio.com/items?itemName=otimofie.vscode-account-switcher`. Note that the Marketplace is public; there is no private, team-scoped gallery for VS Code. For Cursor / VSCodium users, publish to [Open VSX](https://open-vsx.org) as well: `npx ovsx publish vscode-account-switcher-<version>.vsix -p <token>`.
 
 ## Development
 
