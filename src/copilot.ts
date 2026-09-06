@@ -5,7 +5,8 @@ import * as path from 'path';
 
 export const GITHUB_PROVIDER = 'github';
 const MANAGE_PREFS_COMMAND = '_manageAccountPreferencesForExtension';
-const DEFAULT_SCOPES = ['read:user', 'user:email'];
+const COPILOT_SCOPES = ['read:user', 'user:email', 'repo', 'workflow'];
+const COPILOT_MINIMAL_SCOPES = ['user:email'];
 const ACCOUNT_SCHEME = 'copilot-account';
 // VS Code stores the Copilot Chat preference under its parent id (product.json inheritAuthAccountPreference).
 const PREF_PARENT_EXTENSION = 'github.copilot';
@@ -17,7 +18,41 @@ export function getConfig() {
 	const cfg = vscode.workspace.getConfiguration('accountSwitcher');
 	return {
 		targetExtension: cfg.get<string>('copilotExtension', 'GitHub.copilot-chat'),
+		reloadOnSwitch: cfg.get<boolean>('reloadOnSwitch', true),
 	};
+}
+
+export function getCopilotSessionScopes(): string[] {
+	const cfg = vscode.workspace.getConfiguration('github.copilot');
+	const advanced = cfg.get<{ authProvider?: string; authPermissions?: string }>('advanced');
+	const provider = cfg.get<string>('advanced.authProvider') ?? advanced?.authProvider ?? GITHUB_PROVIDER;
+	if (provider !== GITHUB_PROVIDER) {
+		throw new Error('Copilot is configured for a different authentication provider. Account Switcher only supports github.com accounts.');
+	}
+	const permissions = cfg.get<string>('advanced.authPermissions') ?? advanced?.authPermissions;
+	// GitHub matches exact scope sets; Copilot tries the permissive set first unless in minimal mode.
+	return [...(permissions === 'minimal' ? COPILOT_MINIMAL_SCOPES : COPILOT_SCOPES)];
+}
+
+async function prepareCopilotSession(account?: Account): Promise<vscode.AuthenticationSession> {
+	const scopes = getCopilotSessionScopes();
+	const detail = scopes.includes('repo')
+		? 'Copilot tries a session with read:user, user:email, repo and workflow permissions first. Authorize these permissions for the selected account to prevent fallback to another account. Account Switcher does not store or log tokens.'
+		: 'Authorize a user:email session for Copilot\'s minimal-permissions mode. Account Switcher does not store or log tokens.';
+	const session = await vscode.authentication.getSession(GITHUB_PROVIDER, scopes, account
+		? { account, createIfNone: { detail } }
+		: { forceNewSession: { detail } });
+	if (!session || (account && (session.account.id !== account.id || session.account.label !== account.label))) {
+		throw new Error('GitHub did not return a session for the selected account. The Copilot preference was not changed and the window was not reloaded.');
+	}
+	const expected = [...scopes].sort().join(' ');
+	if ([...session.scopes].sort().join(' ') !== expected) {
+		throw new Error('GitHub did not return the exact permissions Copilot needs. The Copilot preference was not changed and the window was not reloaded.');
+	}
+	if (getCopilotSessionScopes().sort().join(' ') !== expected) {
+		throw new Error('Copilot authentication settings changed during sign-in. Try switching again.');
+	}
+	return session;
 }
 
 async function ensureManageCommandAvailable(): Promise<boolean> {
@@ -38,6 +73,7 @@ function delay(ms: number): Promise<void> {
 
 export class CopilotAccounts {
 	private readonly avatarCache = new Map<string, vscode.Uri | undefined>();
+	private switchInProgress = false;
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -127,7 +163,7 @@ export class CopilotAccounts {
 			return {
 				account: a,
 				label: a.label,
-				description: isActive ? '$(star-full) Current account' : undefined,
+				description: isActive ? '$(star-full) Preferred account' : undefined,
 				iconPath: avatars[i] ?? new vscode.ThemeIcon('account'),
 				picked: isActive,
 			};
@@ -139,7 +175,9 @@ export class CopilotAccounts {
 		picker.items = items;
 		picker.activeItems = items.filter(i => i.picked);
 		picker.placeholder = accounts.length
-			? 'Select the GitHub account Copilot should use'
+			? (getConfig().reloadOnSwitch
+				? 'Select the GitHub account for Copilot (reloads this window)'
+				: 'Select the GitHub account Copilot should use')
 			: 'No GitHub accounts are signed in';
 		picker.busy = false;
 
@@ -158,9 +196,7 @@ export class CopilotAccounts {
 
 	async addAccount(): Promise<void> {
 		try {
-			const session = await vscode.authentication.getSession(GITHUB_PROVIDER, DEFAULT_SCOPES, {
-				forceNewSession: true,
-			});
+			const session = await prepareCopilotSession();
 			if (session) {
 				const choice = await vscode.window.showInformationMessage(
 					`Signed in as ${session.account.label}.`,
@@ -179,37 +215,82 @@ export class CopilotAccounts {
 	}
 
 	async selectAccount(account: Account): Promise<void> {
-		const before = await this.readPreferredAccount();
-		if (before === account.label) {
-			vscode.window.setStatusBarMessage(`Copilot already uses ${account.label}`, 3000);
+		if (this.switchInProgress) {
+			vscode.window.setStatusBarMessage('A Copilot account switch is already in progress.', 3000);
 			return;
 		}
 
-		const { targetExtension } = getConfig();
-		if (!vscode.extensions.getExtension(targetExtension)) {
-			vscode.window.showErrorMessage(`Extension "${targetExtension}" is not installed.`);
-			return;
-		}
-		if (!(await ensureManageCommandAvailable())) {
-			return;
-		}
+		this.switchInProgress = true;
+		try {
+			const { targetExtension } = getConfig();
+			if (!vscode.extensions.getExtension(targetExtension)) {
+				vscode.window.showErrorMessage(`Extension "${targetExtension}" is not installed.`);
+				return;
+			}
 
-		// The native picker lists accounts in the same order as getAccounts(), then a separator and "Use a new account...".
-		const accounts = await vscode.authentication.getAccounts(GITHUB_PROVIDER);
-		const index = accounts.findIndex(a => a.id === account.id);
-		if (index < 0) {
-			this.tree.refresh();
-			return;
-		}
+			const signedIn = await vscode.authentication.getAccounts(GITHUB_PROVIDER);
+			if (!signedIn.some(a => a.id === account.id)) {
+				this.tree.refresh();
+				return;
+			}
+			if (!(await ensureManageCommandAvailable())) {
+				return;
+			}
+			await prepareCopilotSession(account);
 
-		// Progress bar at the top of the view plus a spinner in the status bar while the switch is in flight.
-		await vscode.window.withProgress(
-			{ location: { viewId: 'accountSwitcher.copilot' } },
-			() => this.performSwitch(account, before, index, targetExtension)
-		);
+			// Authorization can reorder accounts; the native picker uses the latest getAccounts() order.
+			const accounts = await vscode.authentication.getAccounts(GITHUB_PROVIDER);
+			const index = accounts.findIndex(a => a.id === account.id);
+			if (index < 0) {
+				this.tree.refresh();
+				return;
+			}
+			const before = await this.readPreferredAccount();
+			if (before === account.label) {
+				await this.completeSwitch(account);
+				return;
+			}
+
+			const confirmed = await vscode.window.withProgress(
+				{ location: { viewId: 'accountSwitcher.copilot' } },
+				() => this.performSwitch(account, before, index, targetExtension)
+			);
+			if (confirmed) {
+				await this.completeSwitch(account);
+			}
+		} catch (err) {
+			if (err instanceof Error && /cancel|did not consent/i.test(err.message)) {
+				vscode.window.setStatusBarMessage('Copilot account switch canceled. The window was not reloaded.', 4000);
+				return;
+			}
+			vscode.window.showErrorMessage(
+				`Failed to switch Copilot account: ${err instanceof Error ? err.message : String(err)}`
+			);
+		} finally {
+			this.switchInProgress = false;
+		}
 	}
 
-	private async performSwitch(account: Account, before: string | undefined, index: number, targetExtension: string) {
+	private async completeSwitch(account: Account): Promise<void> {
+		if (!getConfig().reloadOnSwitch) {
+			vscode.window.setStatusBarMessage(
+				`$(github) Copilot preference set to ${account.label}. Reload the window if Copilot still uses the previous account.`,
+				6000
+			);
+			return;
+		}
+		vscode.window.setStatusBarMessage(`Reloading window to use ${account.label} for Copilot...`, 4000);
+		try {
+			// Copilot exposes no supported API to force and verify its live account.
+			await vscode.commands.executeCommand('workbench.action.reloadWindow');
+		} catch {
+			vscode.window.showErrorMessage(
+				`Copilot preference is set to ${account.label}, but the window could not reload. Run "Developer: Reload Window" to reinitialize Copilot.`
+			);
+		}
+	}
+
+	private async performSwitch(account: Account, before: string | undefined, index: number, targetExtension: string): Promise<boolean> {
 		const spinner = vscode.window.setStatusBarMessage(`$(sync~spin) Switching Copilot to ${account.label}...`);
 		this.tree.switchingTo = account.id;
 		this.tree.refresh();
@@ -234,22 +315,20 @@ export class CopilotAccounts {
 			for (let i = 0; i < 20; i++) {
 				await delay(250);
 				const now = await this.readPreferredAccount();
-				if (now !== before) {
-					this.tree.refresh();
-					if (now === account.label) {
-						vscode.window.setStatusBarMessage(`$(github) Copilot now uses ${account.label}`, 4000);
-					} else {
-						vscode.window.showWarningMessage(
-							`Copilot switched to ${now}, not ${account.label}. Use "Switch Copilot Account" to pick manually.`
-						);
-					}
-					return;
+				if (now === account.label) {
+					return true;
+				}
+				if (now && now !== before) {
+					vscode.window.showWarningMessage(
+						`Copilot preference changed to ${now}, not ${account.label}. The window was not reloaded. Use "Switch Copilot Account" to try again.`
+					);
+					return false;
 				}
 			}
-			this.tree.refresh();
 			vscode.window.showWarningMessage(
-				`Could not confirm the switch to ${account.label}. Use "Switch Copilot Account" to pick manually.`
+				`Could not confirm the switch to ${account.label}. The window was not reloaded. Check that sqlite3 is available, then use "Switch Copilot Account" to try again.`
 			);
+			return false;
 		} finally {
 			spinner.dispose();
 			this.tree.switchingTo = undefined;
@@ -336,8 +415,10 @@ export class CopilotTreeProvider implements vscode.TreeDataProvider<vscode.TreeI
 			item.iconPath = isSwitching
 				? new vscode.ThemeIcon('loading~spin')
 				: (avatars[i] ?? new vscode.ThemeIcon('account'));
-			item.description = isSwitching ? 'switching...' : isActive ? 'active' : undefined;
-			item.tooltip = isActive ? 'Copilot is using this account' : 'Click to make Copilot use this account';
+			item.description = isSwitching ? 'switching...' : isActive ? 'preferred' : undefined;
+			item.tooltip = getConfig().reloadOnSwitch
+				? 'Click to select this account and reload the window for Copilot'
+				: 'Click to set the preferred Copilot account (live session not verified)';
 			item.contextValue = isActive ? 'copilotActive' : 'copilotAccount';
 			item.command = {
 				command: 'accountSwitcher.copilot.select',
@@ -355,7 +436,7 @@ export class CopilotTreeProvider implements vscode.TreeDataProvider<vscode.TreeI
 		if (decodeURIComponent(uri.path.slice(1)) !== this.activeAccount) {
 			return undefined;
 		}
-		const deco = new vscode.FileDecoration('★', 'Active Copilot account', new vscode.ThemeColor('charts.yellow'));
+		const deco = new vscode.FileDecoration('★', 'Preferred Copilot account', new vscode.ThemeColor('charts.yellow'));
 		deco.propagate = false;
 		return deco;
 	}

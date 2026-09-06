@@ -104,14 +104,29 @@
             "GitHub.copilot"
           ],
           "description": "Which Copilot extension's GitHub account preference to switch."
+        },
+        "accountSwitcher.reloadOnSwitch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically reload the current VS Code window after confirming the selected Copilot account preference, including when reselecting the preferred account. This reinitializes Copilot and interrupts running chat/tool operations. When disabled, live account activation is best-effort."
         }
       }
     }
   },
-  "repository": { "type": "git", "url": "https://github.com/OleksiiTimofieiev/plugin.git" },
-  "bugs": { "url": "https://github.com/OleksiiTimofieiev/plugin/issues" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OleksiiTimofieiev/plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OleksiiTimofieiev/plugin/issues"
+  },
   "homepage": "https://github.com/OleksiiTimofieiev/plugin#readme",
-  "keywords": ["copilot", "github", "account", "switch"],
+  "keywords": [
+    "copilot",
+    "github",
+    "account",
+    "switch"
+  ],
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
@@ -124,19 +139,23 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
+    "test:unit": "npm run compile-tests && mocha --ui tdd out/test/copilot.test.js",
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.96.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "24.x",
-    "typescript-eslint": "^8.61.1",
-    "eslint": "^10.5.0",
-    "esbuild": "^0.28.1",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^6.0.3",
+    "@types/proxyquire": "^1.3.31",
+    "@types/vscode": "^1.96.0",
     "@vscode/test-cli": "^0.0.15",
-    "@vscode/test-electron": "^3.0.0"
+    "@vscode/test-electron": "^3.0.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.5.0",
+    "mocha": "^12.0.0",
+    "npm-run-all": "^4.1.5",
+    "proxyquire": "^2.1.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1"
   },
   "overrides": {
     "diff": "^8.0.4",
