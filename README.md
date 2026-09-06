@@ -194,14 +194,20 @@ or **Extensions** view → `···` → **Install from VSIX...**, then **Develop
 
 ### GitHub Release (recommended)
 
-Publish the VSIX as a release asset so there is one stable download link:
+Publish the VSIX as a release asset so there is one stable download link. The commands below create the next patch release, `v0.0.2`, from the current `0.0.1` version:
 
 ```sh
-npm version patch                                   # bumps package.json, commits, tags vX.Y.Z
-npx @vscode/vsce package
+git status                                          # confirm the working tree is clean
+npm test                                            # validate the release
+npm version patch                                   # bumps package.json, commits, tags v0.0.2
+make package                                        # creates vscode-account-switcher-0.0.2.vsix
 git push --follow-tags
-gh release create v0.0.2 vscode-account-switcher-0.0.2.vsix --title "v0.0.2" --notes "What changed"
+gh release create v0.0.2 vscode-account-switcher-0.0.2.vsix \
+  --title "v0.0.2" \
+  --generate-notes
 ```
+
+The `gh` command requires GitHub CLI authentication (`gh auth login`). Replace `npm version patch` and the versioned names with `npm version minor` or `npm version major` when the change requires a larger version increment.
 
 Teammates download the `.vsix` from the repository's **Releases** page and install it as above. If the repository is private they need read access.
 
