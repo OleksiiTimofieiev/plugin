@@ -77,9 +77,9 @@ flowchart LR
     "labelBoxBorderColor": "#60a5fa",
     "labelTextColor": "#f8fafc",
     "loopTextColor": "#f8fafc",
-    "noteBkgColor": "#3b3311",
-    "noteBorderColor": "#facc15",
-    "noteTextColor": "#fef9c3",
+    "noteBkgColor": "#fef08a",
+    "noteBorderColor": "#ca8a04",
+    "noteTextColor": "#1c1917",
     "activationBkgColor": "#312e81",
     "activationBorderColor": "#a78bfa",
     "sequenceNumberColor": "#0b1220"
