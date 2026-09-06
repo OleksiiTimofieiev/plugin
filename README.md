@@ -56,34 +56,28 @@ flowchart LR
 
 ```mermaid
 %%{init: {
-  "theme": "base",
+  "theme": "dark",
   "themeVariables": {
     "fontFamily": "ui-sans-serif, system-ui, sans-serif",
-    "fontSize": "15px",
-    "background": "#0d1117",
-    "mainBkg": "#1f2937",
-    "primaryColor": "#1f2937",
-    "primaryTextColor": "#f8fafc",
-    "primaryBorderColor": "#60a5fa",
-    "lineColor": "#e2e8f0",
-    "textColor": "#f8fafc",
+    "fontSize": "16px",
     "actorBkg": "#1f2937",
     "actorBorder": "#60a5fa",
-    "actorTextColor": "#f8fafc",
+    "actorTextColor": "#ffffff",
     "actorLineColor": "#94a3b8",
-    "signalColor": "#e2e8f0",
-    "signalTextColor": "#f8fafc",
+    "signalColor": "#ffffff",
+    "signalTextColor": "#ffffff",
     "labelBoxBkgColor": "#1e3a5f",
     "labelBoxBorderColor": "#60a5fa",
-    "labelTextColor": "#f8fafc",
-    "loopTextColor": "#f8fafc",
-    "noteBkgColor": "#fef08a",
-    "noteBorderColor": "#ca8a04",
-    "noteTextColor": "#1c1917",
+    "labelTextColor": "#ffffff",
+    "loopTextColor": "#ffffff",
+    "noteBkgColor": "#fde047",
+    "noteBorderColor": "#a16207",
+    "noteTextColor": "#000000",
     "activationBkgColor": "#312e81",
     "activationBorderColor": "#a78bfa",
-    "sequenceNumberColor": "#0b1220"
-  }
+    "sequenceNumberColor": "#000000"
+  },
+  "themeCSS": ".note { fill: #fde047 !important; stroke: #a16207 !important; } .noteText, .noteText tspan, .noteText > tspan { fill: #000000 !important; font-weight: 600; } .messageText, .messageText tspan { fill: #ffffff !important; } .actor { fill: #1f2937 !important; stroke: #60a5fa !important; } .actor > tspan, text.actor { fill: #ffffff !important; } .labelText, .labelText tspan, .loopText, .loopText tspan { fill: #ffffff !important; } .labelBox { fill: #1e3a5f !important; stroke: #60a5fa !important; } .actor-line { stroke: #94a3b8 !important; } .messageLine0, .messageLine1 { stroke: #ffffff !important; } #arrowhead path, .arrowheadPath { fill: #ffffff !important; stroke: #ffffff !important; }"
 }}%%
 sequenceDiagram
     autonumber
