@@ -97,7 +97,7 @@ sequenceDiagram
       U->>V: Authorize bob
     end
     V-->>E: Session for bob with matching scopes
-    Note over E,V: Verify returned account and exact scopes; abort on mismatch
+    Note over E,V: Verify returned account and exact scopes — abort on mismatch
     E->>V: getAccounts("github") again after authorization
     E->>V: runCommands([open picker, first, next…, accept])
     V->>V: setPreferredAccount(copilot-chat, bob)
